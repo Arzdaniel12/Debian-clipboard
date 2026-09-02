@@ -26,7 +26,7 @@ python3 -m venv --system-site-packages .venv
 
 ```bash
 ./packaging/build-deb.sh
-sudo apt install ./dist/clipboard-history_1.0.1_all.deb
+sudo apt install ./dist/clipboard-history_1.0.2_all.deb
 ```
 
 El paquete instala el comando `clipboard-history` y el lanzador del menú en `/usr/share/applications`.
