@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import io
 import os
+import sys
 from pathlib import Path
 
 import gi
@@ -131,6 +131,7 @@ class ClipboardApplication(Gtk.Application):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.FLAGS_NONE)
         data_dir = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "clipboard-history"
         self.store = ClipboardStore(data_dir / "history.db")
+        self.hidden = "--hidden" in sys.argv
         self.hotkey = Hotkey(self, self.show_history)
 
     def do_activate(self) -> None:
@@ -138,9 +139,19 @@ class ClipboardApplication(Gtk.Application):
             self.window = HistoryWindow(self)
             self.monitor = ClipboardMonitor(self.store, self.window.refresh)
             self.monitor.start()
-            self.hotkey.register()
+            if not self.hotkey.register():
+                print("No se pudo registrar Super+V; puede estar en uso.", file=sys.stderr)
             self._create_tray()
-        self.show_history()
+        if not self.hidden:
+            self.show_history()
+
+    def do_shutdown(self) -> None:
+        if hasattr(self, "hotkey"):
+            self.hotkey.unregister()
+        if hasattr(self, "monitor"):
+            self.monitor.stop()
+        self.store.close()
+        super().do_shutdown()
 
     def show_history(self) -> None:
         self.window.show_all()
@@ -173,7 +184,7 @@ class ClipboardApplication(Gtk.Application):
         path = Path.home() / ".config/autostart/clipboard-history.desktop"
         if enabled:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("[Desktop Entry]\nType=Application\nName=Clipboard History\nExec=clipboard-history\nX-GNOME-Autostart-enabled=true\n", encoding="utf-8")
+            path.write_text("[Desktop Entry]\nType=Application\nName=Clipboard History\nExec=clipboard-history --hidden\nX-GNOME-Autostart-enabled=true\n", encoding="utf-8")
         elif path.exists():
             path.unlink()
 

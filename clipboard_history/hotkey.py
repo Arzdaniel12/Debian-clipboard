@@ -1,11 +1,12 @@
-"""Best-effort global hotkey integration with a GTK fallback."""
+"""Global X11 hotkey integration through Keybinder."""
 
 from __future__ import annotations
 
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gio, Gtk
+gi.require_version("Keybinder", "3.0")
+from gi.repository import Gtk, Keybinder
 
 
 class Hotkey:
@@ -13,16 +14,26 @@ class Hotkey:
         self.application = application
         self.callback = callback
         self.accelerator = accelerator
-        self.action = "app.show-history"
+        self.registered = False
+        Keybinder.init()
 
-    def register(self) -> None:
-        action = self.application.lookup_action("show-history")
-        if action is None:
-            action = Gio.SimpleAction.new("show-history", None)
-            action.connect("activate", lambda *_: self.callback())
-            self.application.add_action(action)
-        self.application.set_accels_for_action(self.action, [self.accelerator])
+    def _on_activate(self, *_args) -> None:
+        self.callback()
 
-    def set_accelerator(self, accelerator: str) -> None:
+    def register(self) -> bool:
+        if self.registered:
+            return True
+        if not Keybinder.bind(self.accelerator, self._on_activate, None):
+            return False
+        self.registered = True
+        return True
+
+    def unregister(self) -> None:
+        if self.registered:
+            Keybinder.unbind(self.accelerator)
+            self.registered = False
+
+    def set_accelerator(self, accelerator: str) -> bool:
+        self.unregister()
         self.accelerator = accelerator
-        self.register()
+        return self.register()

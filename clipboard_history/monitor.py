@@ -9,7 +9,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 from .storage import ClipboardItem, ClipboardStore
 
@@ -23,10 +23,16 @@ class ClipboardMonitor:
         self.private_mode = False
         self.excluded_apps: set[str] = set()
         self._last_fingerprint: bytes | None = None
+        self._timer_id: int | None = None
 
     def start(self) -> None:
-        # Polling works on X11 and Wayland without clipboard command-line tools.
-        Gtk.timeout_add(500, self._poll)
+        if self._timer_id is None:
+            self._timer_id = GLib.timeout_add(500, self._poll)
+
+    def stop(self) -> None:
+        if self._timer_id is not None:
+            GLib.source_remove(self._timer_id)
+            self._timer_id = None
 
     def _poll(self) -> bool:
         if not self.paused and not self.private_mode:

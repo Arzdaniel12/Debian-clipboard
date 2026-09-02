@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "clipboard-history"
-version = "1.0.0"
+version = "1.0.1"
 description = "Local text and image clipboard history for Debian"
 requires-python = ">=3.10"
 

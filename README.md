@@ -11,10 +11,12 @@ Aplicación nativa para Debian que conserva localmente los últimos 100 elemento
 - Atajo `Super+V`, configurable desde Preferencias.
 - Inicio automático mediante el diálogo de Preferencias.
 
+El atajo global usa Keybinder y requiere una sesión X11. En Wayland, GTK no puede registrar este atajo globalmente. Al iniciar automáticamente, la aplicación queda en la bandeja y no abre la ventana hasta pulsar `Super+V`.
+
 ## Instalar en Debian
 
 ```bash
-sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-gdkpixbuf-2.0 python3-venv
+sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-gdkpixbuf-2.0 gir1.2-keybinder-3.0 python3-venv
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip install -e .
 .venv/bin/clipboard-history
@@ -24,7 +26,7 @@ python3 -m venv --system-site-packages .venv
 
 ```bash
 ./packaging/build-deb.sh
-sudo apt install ./dist/clipboard-history_1.0.0_all.deb
+sudo apt install ./dist/clipboard-history_1.0.1_all.deb
 ```
 
 El paquete instala el comando `clipboard-history` y el lanzador del menú en `/usr/share/applications`.

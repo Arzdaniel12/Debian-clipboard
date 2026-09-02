@@ -1,10 +1,10 @@
 Package: clipboard-history
-Version: 1.0.0
+Version: 1.0.1
 Section: utils
 Priority: optional
 Architecture: all
 Maintainer: Arzdaniel12 <danielrzu208@gmail.com>
-Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-gdkpixbuf-2.0
+Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-gdkpixbuf-2.0, gir1.2-keybinder-3.0
 Description: Local clipboard history manager for Debian
  Clipboard History stores up to 100 text and image clipboard entries locally
  and provides a GTK search window for copying them again.
