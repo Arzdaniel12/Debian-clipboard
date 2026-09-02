@@ -1,0 +1,45 @@
+name: Build Debian release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish .deb
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Build Debian package
+        run: ./packaging/build-deb.sh
+
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          tag_version="${RELEASE_TAG#v}"
+          project_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' pyproject.toml)"
+          control_version="$(sed -n 's/^Version: //p' debian/control)"
+          package="dist/clipboard-history_${project_version}_all.deb"
+
+          test "$RELEASE_TAG" != "$tag_version"
+          test "$tag_version" = "$project_version"
+          test "$project_version" = "$control_version"
+          test -f "$package"
+          printf 'Publishing %s\n' "$package"
+
+      - name: Create GitHub Release and upload .deb
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.deb --title "Clipboard History $GITHUB_REF_NAME" --generate-notes
