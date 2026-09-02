@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from pathlib import Path
+from threading import Thread
 
 import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import GdkPixbuf, Gio, Gtk
+from gi.repository import GdkPixbuf, Gio, GLib, Gtk
 
+from . import __version__
 from .hotkey import Hotkey
 from .monitor import ClipboardMonitor
 from .storage import ClipboardItem, ClipboardStore
+from .updater import Updater
 
 
 APP_ID = "org.debian.ClipboardHistory"
@@ -133,6 +137,7 @@ class ClipboardApplication(Gtk.Application):
         self.store = ClipboardStore(data_dir / "history.db")
         self.hidden = "--hidden" in sys.argv
         self.hotkey = Hotkey(self, self.show_history)
+        self.updater = Updater(__version__, self._offer_update)
 
     def do_activate(self) -> None:
         if not hasattr(self, "window"):
@@ -142,16 +147,46 @@ class ClipboardApplication(Gtk.Application):
             if not self.hotkey.register():
                 print("No se pudo registrar Super+V; puede estar en uso.", file=sys.stderr)
             self._create_tray()
+            self.updater.check_async()
+            self.update_timer = GLib.timeout_add_seconds(21600, self._check_updates)
         if not self.hidden:
             self.show_history()
 
     def do_shutdown(self) -> None:
+        if hasattr(self, "update_timer"):
+            GLib.source_remove(self.update_timer)
         if hasattr(self, "hotkey"):
             self.hotkey.unregister()
         if hasattr(self, "monitor"):
             self.monitor.stop()
         self.store.close()
         super().do_shutdown()
+
+    def _check_updates(self) -> bool:
+        self.updater.check_async()
+        return True
+
+    def _offer_update(self, version: str, package_path) -> None:
+        GLib.idle_add(self._show_update_dialog, version, package_path)
+
+    def _show_update_dialog(self, version: str, package_path) -> bool:
+        if not hasattr(self, "window"):
+            return False
+        dialog = Gtk.MessageDialog(self.window, Gtk.DialogFlags.MODAL, Gtk.MessageType.INFO, Gtk.ButtonsType.YES_NO, f"Hay una actualización disponible: {version}. ¿Instalarla ahora?")
+        response = dialog.run()
+        dialog.destroy()
+        if response == Gtk.ResponseType.YES:
+            Thread(target=self._install_update, args=(package_path,), daemon=True).start()
+        return False
+
+    def _install_update(self, package_path) -> None:
+        if self.updater.install(package_path):
+            GLib.idle_add(self._restart_after_update)
+
+    def _restart_after_update(self) -> bool:
+        self.quit()
+        subprocess.Popen(["clipboard-history", "--hidden"])
+        return False
 
     def show_history(self) -> None:
         self.window.show_all()
@@ -170,9 +205,11 @@ class ClipboardApplication(Gtk.Application):
         show.connect("activate", lambda *_: self.show_history())
         preferences = Gtk.MenuItem(label="Preferencias")
         preferences.connect("activate", lambda *_: PreferencesDialog(self).run())
+        updates = Gtk.MenuItem(label="Buscar actualizaciones")
+        updates.connect("activate", lambda *_: self.updater.check_async())
         quit_item = Gtk.MenuItem(label="Salir")
         quit_item.connect("activate", lambda *_: self.quit())
-        for item in (show, preferences, quit_item):
+        for item in (show, preferences, updates, quit_item):
             menu.append(item)
         menu.show_all()
         menu.popup(None, None, Gtk.StatusIcon.position_menu, self.tray, button, timestamp)

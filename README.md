@@ -10,6 +10,7 @@ Aplicación nativa para Debian que conserva localmente los últimos 100 elemento
 - Pausa del monitoreo, modo privado y exclusión preparada para aplicaciones sensibles.
 - Atajo `Super+V`, configurable desde Preferencias.
 - Inicio automático mediante el diálogo de Preferencias.
+- Comprobación automática de nuevas Releases y actualización mediante el paquete `.deb`.
 
 El atajo global usa Keybinder y requiere una sesión X11. En Wayland, GTK no puede registrar este atajo globalmente. Al iniciar automáticamente, la aplicación queda en la bandeja y no abre la ventana hasta pulsar `Super+V`.
 
@@ -26,12 +27,14 @@ python3 -m venv --system-site-packages .venv
 
 ```bash
 ./packaging/build-deb.sh
-sudo apt install ./dist/clipboard-history_1.0.2_all.deb
+sudo apt install ./dist/clipboard-history_1.0.3_all.deb
 ```
 
 El paquete instala el comando `clipboard-history` y el lanzador del menú en `/usr/share/applications`.
 
 Al cambiar la versión en `pyproject.toml`, `debian/control` y `clipboard_history/__init__.py`, basta con hacer `git push` a `main`: GitHub creará automáticamente el tag correspondiente y publicará una nueva Release con el `.deb`.
+
+La aplicación busca actualizaciones al iniciar y cada seis horas. Cuando encuentra una nueva Release, muestra una confirmación y usa `pkexec`/`apt-get` para instalar el `.deb`; necesitarás autorizar la operación con tu contraseña del sistema.
 
 También se puede instalar el lanzador en el menú de aplicaciones:
 
