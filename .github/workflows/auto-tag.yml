@@ -44,3 +44,5 @@ jobs:
             -f "ref=refs/tags/$tag" \
             -f "sha=${GITHUB_SHA}"
           echo "Created $tag for ${GITHUB_SHA}."
+          gh workflow run release.yml --ref "$tag"
+          echo "Started release workflow for $tag."
