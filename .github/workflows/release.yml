@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -29,7 +34,7 @@ jobs:
 
       - name: Verify release version
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           set -eu
           tag_version="${RELEASE_TAG#v}"
@@ -46,4 +51,5 @@ jobs:
       - name: Create GitHub Release and upload .deb
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.deb --title "Clipboard History $GITHUB_REF_NAME" --generate-notes
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: gh release create "$RELEASE_TAG" dist/*.deb --target "$GITHUB_SHA" --title "Clipboard History $RELEASE_TAG" --generate-notes
