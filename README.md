@@ -31,6 +31,8 @@ sudo apt install ./dist/clipboard-history_1.0.2_all.deb
 
 El paquete instala el comando `clipboard-history` y el lanzador del menú en `/usr/share/applications`.
 
+Al cambiar la versión en `pyproject.toml`, `debian/control` y `clipboard_history/__init__.py`, basta con hacer `git push` a `main`: GitHub creará automáticamente el tag correspondiente y publicará una nueva Release con el `.deb`.
+
 También se puede instalar el lanzador en el menú de aplicaciones:
 
 ```bash

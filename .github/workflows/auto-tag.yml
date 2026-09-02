@@ -1,0 +1,46 @@
+name: Tag version automatically
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "pyproject.toml"
+      - "debian/control"
+      - "clipboard_history/__init__.py"
+
+permissions:
+  contents: write
+
+jobs:
+  tag-version:
+    name: Create version tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@v4
+
+      - name: Create tag when version is new
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          project_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' pyproject.toml)"
+          control_version="$(sed -n 's/^Version: //p' debian/control)"
+          source_version="$(sed -n 's/^__version__ = "\([^"]*\)"/\1/p' clipboard_history/__init__.py)"
+          tag="v$project_version"
+
+          test -n "$project_version"
+          test "$project_version" = "$control_version"
+          test "$project_version" = "$source_version"
+
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists; nothing to do."
+            exit 0
+          fi
+
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f "ref=refs/tags/$tag" \
+            -f "sha=${GITHUB_SHA}"
+          echo "Created $tag for ${GITHUB_SHA}."
